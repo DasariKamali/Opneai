@@ -1,0 +1,119 @@
+{
+  "name": "lessons-indexed-skillset",
+  "description": "Skillset to chunk documents and generate embeddings with chunk order preserved",
+  "skills": [
+    {
+      "@odata.type": "#Microsoft.Skills.Text.SplitSkill",
+      "name": "TextSplitSkill",
+      "description": "Split documents into chunks",
+      "context": "/document",
+      "defaultLanguageCode": "en",
+      "textSplitMode": "pages",
+      "maximumPageLength": 2000,
+      "pageOverlapLength": 500,
+      "maximumPagesToTake": 0,
+      "unit": "characters",
+      "inputs": [
+        {
+          "name": "text",
+          "source": "/document/content"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "textItems",
+          "targetName": "pages"
+        },
+        {
+          "name": "ordinalPositions",
+          "targetName": "ordinalPositions"
+        }
+      ]
+    },
+    {
+      "@odata.type": "#Microsoft.Skills.Util.ShaperSkill",
+      "name": "ZipChunksWithOrdinal",
+      "description": "Zip pages and ordinalPositions arrays into one array of objects",
+      "context": "/document",
+      "inputs": [
+        {
+          "name": "textItems",
+          "source": "/document/pages"
+        },
+        {
+          "name": "positions",
+          "source": "/document/ordinalPositions"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "value",
+          "targetName": "pagesWithOrdinal"
+        }
+      ],
+      "shaper": {
+        "value": "=zip(textItems, positions).map(x => { text: x[0], ordinalPosition: x[1] })"
+      }
+    },
+    {
+      "@odata.type": "#Microsoft.Skills.Text.AzureOpenAIEmbeddingSkill",
+      "name": "EmbeddingSkill",
+      "context": "/document/pagesWithOrdinal/*",
+      "resourceUri": "redacted",
+      "apiKey": "<redacted>",
+      "deploymentId": "text-embedding-ada-002",
+      "dimensions": 1536,
+      "modelName": "text-embedding-ada-002",
+      "inputs": [
+        {
+          "name": "text",
+          "source": "/document/pagesWithOrdinal/*/text"
+        }
+      ],
+      "outputs": [
+        {
+          "name": "embedding",
+          "targetName": "text_vector"
+        }
+      ]
+    }
+  ],
+  "cognitiveServices": {
+    "@odata.type": "#Microsoft.Azure.Search.AIServicesByKey",
+    "subdomainUrl": "redacted"
+  },
+  "indexProjections": {
+    "selectors": [
+      {
+        "targetIndexName": "lessons-indexed",
+        "parentKeyFieldName": "parent_id",
+        "sourceContext": "/document/pagesWithOrdinal/*",
+        "mappings": [
+          {
+            "name": "chunk",
+            "source": "/document/pagesWithOrdinal/*/text"
+          },
+          {
+            "name": "chunk_index",
+            "source": "/document/pagesWithOrdinal/*/ordinalPosition"
+          },
+          {
+            "name": "text_vector",
+            "source": "/document/pagesWithOrdinal/*/text_vector"
+          },
+          {
+            "name": "title",
+            "source": "/document/title"
+          },
+          {
+            "name": "file_name",
+            "source": "/document/metadata_storage_name"
+          }
+        ]
+      }
+    ],
+    "parameters": {
+      "projectionMode": "skipIndexingParentDocuments"
+    }
+  }
+}
