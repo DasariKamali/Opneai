@@ -48,12 +48,10 @@
       "outputs": [
         {
           "name": "value",
-          "targetName": "pagesWithOrdinal"
+          "targetName": "pagesWithOrdinal",
+          "value": "=zip(textItems, positions).map(x => { text: x[0], ordinalPosition: x[1] })"
         }
-      ],
-      "shaper": {
-        "value": "=zip(textItems, positions).map(x => { text: x[0], ordinalPosition: x[1] })"
-      }
+      ]
     },
     {
       "@odata.type": "#Microsoft.Skills.Text.AzureOpenAIEmbeddingSkill",
