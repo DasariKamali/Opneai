@@ -1,28 +1,36 @@
 from openai import AzureOpenAI
+import os
+import logging
+
+logging.basicConfig(level=logging.INFO)
+
+config = {
+    "api_key": "<OpenaiKey>",
+    "endpoint": "https://<OpenaiName>.openai.azure.com/"
+}
 
 client = AzureOpenAI(
-    api_key="<OpenaiKey>",
-    base_url="https://<OpenaiName>.openai.azure.com/openai", 
-    api_version="2024-02-15-preview" 
+    api_key=config["api_key"],
+    base_url=config["endpoint"],
+    api_version="2025-04-01-preview"
 )
 
-chat_history = [
-    {"role": "system", "content": "You are a helpful assistant."},
-    {"role": "user", "content": "What can you do?"}
-]
-
-tools = [
+parsed_tools = [
     {
         "type": "function",
         "function": {
-            "name": "get_weather",
-            "description": "Get the weather for a location",
+            "name": "get_current_weather",
+            "description": "Get the current weather in a given location",
             "parameters": {
                 "type": "object",
                 "properties": {
                     "location": {
                         "type": "string",
-                        "description": "The city to get the weather for"
+                        "description": "The city and state, e.g., San Francisco, CA"
+                    },
+                    "unit": {
+                        "type": "string",
+                        "enum": ["celsius", "fahrenheit"]
                     }
                 },
                 "required": ["location"]
@@ -31,11 +39,18 @@ tools = [
     }
 ]
 
-response = client.chat.completions.create(
-    model="computer-use-preview", 
+chat_history = [
+    {"role": "user", "content": "What’s the weather like in Mumbai in celsius?"}
+]
+
+response = client.responses.create(
+    model="computer-use-preview",
     messages=chat_history,
-    tools=tools,
-    tool_choice="auto"
+    tools=parsed_tools,
+    tool_choice="auto", 
+    temperature=0.7,
+    max_tokens=1024,
+    truncation="auto"
 )
 
-print(response.choices[0].message)
+print(response)
